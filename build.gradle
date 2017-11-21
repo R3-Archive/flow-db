@@ -1,9 +1,10 @@
 buildscript {
-    ext.corda_release_version = '2.0.0'
+    ext.corda_release_version = '1.0.0'
     ext.corda_gradle_plugins_version = '1.0.0'
     ext.kotlin_version = '1.1.4'
     ext.junit_version = '4.12'
-    ext.quasar_version = '0.7.9'
+    ext.quasar_version = '0.7.6'
+    ext.okhttp_version = '3.5.0'
 
     repositories {
         mavenLocal()
@@ -59,6 +60,9 @@ dependencies {
     cordaRuntime "net.corda:corda-webserver:$corda_release_version"
 
     testCompile "net.corda:corda-node-driver:$corda_release_version"
+
+    // OkHTTP: A simple HTTP library.
+    compile "com.squareup.okhttp3:okhttp:$okhttp_version"
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
@@ -96,10 +100,4 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         ]
         rpcUsers = [[ user: "user1", "password": "test", "permissions": ["StartFlow.com.flowhttp.HttpCallFlow"]]]
     }
-}
-
-task runClient(type: JavaExec) {
-    classpath = sourceSets.main.runtimeClasspath
-    main = 'com.flowhttp.AppKt'
-    args 'localhost:10006'
 }

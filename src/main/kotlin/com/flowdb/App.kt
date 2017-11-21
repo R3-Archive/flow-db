@@ -1,63 +1,157 @@
 package com.flowdb
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.messaging.startFlow
-import net.corda.core.utilities.NetworkHostAndPort.Companion.parse
+import net.corda.core.node.ServiceHub
+import net.corda.core.node.services.CordaService
+import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.loggerFor
-import okhttp3.OkHttpClient
-import okhttp3.Request
+import java.sql.PreparedStatement
+import java.sql.ResultSet
+import java.sql.SQLException
 
-val BITCOIN_README_URL = "https://raw.githubusercontent.com/bitcoin/bitcoin/4405b78d6059e536c36974088a8ed4d9f0f29898/readme.txt"
+val TABLE_NAME = "obligation_queue"
 
 @InitiatingFlow
 @StartableByRPC
-class HttpCallFlow : FlowLogic<String>() {
+class AddTokenValueFlow : FlowLogic<Unit>() {
     override val progressTracker: ProgressTracker = ProgressTracker()
 
     @Suspendable
-    override fun call(): String {
-        val httpRequest = Request.Builder().url(BITCOIN_README_URL).build()
-
-        // BE CAREFUL when making HTTP calls in flows:
-        // 1. The request must be executed in a BLOCKING way. Flows don't
-        //    currently support suspending to await an HTTP call's response
-        // 2. The request must be idempotent. If the flow fails and has to
-        //    restart from a checkpoint, the request will also be replayed
-        val httpResponse = OkHttpClient().newCall(httpRequest).execute()
-
-        return httpResponse.body().string()
+    override fun call() {
+        val databaseService = serviceHub.cordaService(DatabaseService::class.java)
+        databaseService.addTokenValue("bitcoin", 7000)
     }
 }
 
-class Client {
-    companion object {
-        val logger = loggerFor<Client>()
-    }
+@InitiatingFlow
+@StartableByRPC
+class UpdateTokenValueFlow : FlowLogic<Unit>() {
+    override val progressTracker: ProgressTracker = ProgressTracker()
 
-    fun main(args: Array<String>) {
-        require(args.size == 1) { "Usage: Client <node address>" }
-        val nodeAddress = parse(args[0])
-        val client = CordaRPCClient(nodeAddress)
-
-        // Can be amended in the build.gradle file.
-        val proxy = client.start("user1", "test").proxy
-
-        // Run the HttpCallFlow and retrieve its response value.
-        val returnValue = proxy.startFlow(::HttpCallFlow).returnValue.get()
-
-        logger.info(returnValue)
+    @Suspendable
+    override fun call(): Unit {
+        val databaseService = serviceHub.cordaService(DatabaseService::class.java)
+        databaseService.updateTokenValue("bitcoin", 8000)
     }
 }
 
-/**
- * Demonstration of how to use the CordaRPCClient to connect to a Corda Node and
- * stream the contents of the node's vault.
- */
-fun main(args: Array<String>) {
-    Client().main(args)
+@InitiatingFlow
+@StartableByRPC
+class QueryTokenValueFlow : FlowLogic<Int>() {
+    override val progressTracker: ProgressTracker = ProgressTracker()
+
+    @Suspendable
+    override fun call(): Int {
+        val databaseService = serviceHub.cordaService(DatabaseService::class.java)
+        return databaseService.queryTokenValue("bitcoin")
+    }
+}
+
+@CordaService
+class DatabaseService(val services: ServiceHub) : SingletonSerializeAsToken() {
+    init {
+        setUpStorage()
+    }
+
+    private companion object {
+        val log = loggerFor<DatabaseService>()
+    }
+
+    // Creates a custom node database table.
+    private fun setUpStorage() {
+        val query = """
+            create table if not exists $TABLE_NAME(
+                token varchar(64),
+                value int
+            )"""
+
+        executeUpdate(query, emptyMap())
+        log.info("Created custom table.")
+    }
+
+    fun addTokenValue(token: String, value: Int) {
+        val query = "insert into $TABLE_NAME values(?, ?)"
+
+        val params = mapOf(1 to token, 2 to value)
+
+        executeUpdate(query, params)
+        log.info("Token $token added to Queue.")
+    }
+
+    fun updateTokenValue(token: String, value: Int) {
+        val query = "update $TABLE_NAME set value = ? where token = ?"
+
+        val params = mapOf(1 to value, 2 to token)
+
+        executeUpdate(query, params)
+        log.info("Token $token status updated.")
+    }
+
+    fun queryTokenValue(token: String): Int {
+        val query = "select value from $TABLE_NAME where token = ?"
+
+        val params = mapOf(1 to token)
+
+        return executeQuery(query, params, { it -> it.getInt("value") }).single()
+    }
+
+    // Queries the database.
+    private fun <T : Any> executeQuery(
+            query: String,
+            params: Map<Int, Any>,
+            transformer: (ResultSet) -> T
+    ): List<T> {
+        val preparedStatement = prepareStatement(query, params)
+        val obligations = mutableListOf<T>()
+
+        try {
+            val resultSet = preparedStatement.executeQuery()
+            while (resultSet.next()) {
+                obligations.add(transformer(resultSet))
+            }
+        } catch (e: SQLException) {
+            log.error(e.message)
+            throw e
+        } finally {
+            preparedStatement.close()
+        }
+
+        return obligations
+    }
+
+    // Updates the database.
+    private fun executeUpdate(query: String, params: Map<Int, Any>) {
+        val preparedStatement = prepareStatement(query, params)
+
+        try {
+            preparedStatement.executeUpdate()
+        } catch (e: SQLException) {
+            log.error(e.message)
+            throw e
+        } finally {
+            preparedStatement.close()
+        }
+    }
+
+    // Creates a PreparedStatement - a precompiled SQL statement to be
+    // executed against the database.
+    private fun prepareStatement(query: String, params: Map<Int, Any>): PreparedStatement {
+        val session = services.jdbcSession()
+        val preparedStatement = session.prepareStatement(query)
+
+        params.forEach { (key, value) ->
+            when (value) {
+                is String -> preparedStatement.setString(key, value)
+                is Int -> preparedStatement.setInt(key, value)
+                is Long -> preparedStatement.setLong(key, value)
+                else -> throw IllegalArgumentException("Unsupported type.")
+            }
+        }
+
+        return preparedStatement
+    }
 }

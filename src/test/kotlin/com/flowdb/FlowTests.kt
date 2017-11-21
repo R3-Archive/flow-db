@@ -11,8 +11,6 @@ import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 
-val BITCOIN_README_URL = "https://raw.githubusercontent.com/bitcoin/bitcoin/4405b78d6059e536c36974088a8ed4d9f0f29898/readme.txt"
-
 class FlowTests {
     lateinit var network: MockNetwork
     lateinit var a: StartedNode<MockNode>
@@ -20,8 +18,13 @@ class FlowTests {
     @Before
     fun setup() {
         network = MockNetwork()
+
         val nodes = network.createSomeNodes(1)
         a = nodes.partyNodes[0]
+        a.database.transaction {
+            a.internals.installCordaService(DatabaseService::class.java)
+        }
+
         network.runNetwork()
     }
 
@@ -33,18 +36,23 @@ class FlowTests {
 
     @Test
     fun `testFlowReturnsCorrectHtml`() {
-        // The flow should return the first commit of the BitCoin readme.
-        val flow = HttpCallFlow()
+        val flow = AddTokenValueFlow()
         val future = a.services.startFlow(flow).resultFuture
         network.runNetwork()
         val returnValue = future.get()
 
-        // We run the flow and retrieve its return value.
-        val httpRequest = Request.Builder().url(BITCOIN_README_URL).build()
-        val httpResponse = OkHttpClient().newCall(httpRequest).execute()
-        val expectedValue = httpResponse.body().string()
+        val flow2 = UpdateTokenValueFlow()
+        val future2 = a.services.startFlow(flow2).resultFuture
+        network.runNetwork()
+        val returnValue2 = future2.get()
 
-        // We check that the strings are equal.
-        assertEquals(expectedValue, returnValue)
+        val flow3 = QueryTokenValueFlow()
+        val future3 = a.services.startFlow(flow3).resultFuture
+        network.runNetwork()
+        val returnValue3 = future3.get()
+
+        println()
+        println(returnValue3)
+        println()
     }
 }
