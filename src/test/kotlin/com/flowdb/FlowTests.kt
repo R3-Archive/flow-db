@@ -1,4 +1,4 @@
-package com.birthdays
+package com.flowdb
 
 import net.corda.node.internal.StartedNode
 import net.corda.testing.node.MockNetwork

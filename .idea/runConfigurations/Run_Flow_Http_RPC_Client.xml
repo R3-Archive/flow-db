@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Run Flow Http RPC Client" type="JetRunConfigurationType" factoryName="Kotlin" singleton="true">
     <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea" />
-    <option name="MAIN_CLASS_NAME" value="com.birthdays.AppKt" />
+    <option name="MAIN_CLASS_NAME" value="com.flowdb.AppKt" />
     <option name="VM_PARAMETERS" value="" />
     <option name="PROGRAM_PARAMETERS" value="localhost:10006" />
     <option name="WORKING_DIRECTORY" value="" />
