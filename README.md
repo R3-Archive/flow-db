@@ -7,9 +7,9 @@ maintain a table of cryptocurrency values in the node's database. There are thre
 
 The CorDapp defines three flows:
 
-* AddTokenValueFlow, which adds a new token to the database table with an initial value
-* UpdateTokenValueFlow, which updates the value of an existing token in the database table
-* QueryTokenValueFlow, which reads the value of an existing token from the database table
+* `AddTokenValueFlow`, which adds a new token to the database table with an initial value
+* `UpdateTokenValueFlow`, which updates the value of an existing token in the database table
+* `QueryTokenValueFlow`, which reads the value of an existing token from the database table
 
 Under the hood, the database accesses are managed by the CryptoValuesDatabaseService CordaService.
 
