@@ -1,15 +1,23 @@
 ![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
 
-# Flow Http CorDapp
+# Flow Database Access CorDapp
 
-This CorDapp provides a simple example of how HTTP requests can be made in flows. In this case, the flow makes an HTTP 
-request to retrieve the original BitCoin readme from GitHub.
+This CorDapp provides a simple example of how the node database can be accessed in flows. In this case, the flows 
+maintain a table of cryptocurrency values in the node's database. There are three flows:
 
-Be aware that support of HTTP requests in flows is currently limited:
+The CorDapp defines three flows:
 
-* The request must be executed in a BLOCKING way. Flows don't currently support suspending to await an HTTP call's 
+* AddTokenValueFlow, which adds a new token to the database table with an initial value
+* UpdateTokenValueFlow, which updates the value of an existing token in the database table
+* QueryTokenValueFlow, which reads the value of an existing token from the database table
+
+Under the hood, the database accesses are managed by the CryptoValuesDatabaseService CordaService.
+
+Be aware that support of database accesses in flows is currently limited:
+
+* The operation must be executed in a BLOCKING way. Flows don't currently support suspending to await an operation's  
   response
-* The request must be idempotent. If the flow fails and has to restart from a checkpoint, the request will also be 
+* The operation must be idempotent. If the flow fails and has to restart from a checkpoint, the operation will also be 
   replayed
 
 # Pre-requisites:
@@ -24,16 +32,16 @@ See https://docs.corda.net/tutorial-cordapp.html#running-the-example-cordapp.
 
 ## Interacting with the nodes:
 
-### Via RPC
+### Via the web API
 
-Run the following command from a terminal window at the root of the project:
+Add a token to the node's database table by running:
 
-* Unix/Mac OSX: `./gradlew runClient`
-* Windows: `gradlew runClient`
+    localhost:10007/api/token/add-token?token=TOKEN_NAME&value=TOKEN_INITIAL_VALUE
 
-The text of the first commit of the BitCoin readme will be printed to the terminal window.
+Update a token's value in the node's database table by running:
 
-### Via IntelliJ
+    localhost:10007/api/token/update-token?token=TOKEN_NAME&value=TOKEN_NEW_VALUE
 
-Run the `Run Flow Http RPC Client` run configuration. As with the RPC client, the text of the first commit of the 
-BitCoin readme will be printed in the terminal window.
+And read back a token's value from the node's database table by running:
+
+    localhost:10007/api/token/query-token?token=TOKEN_NAME
