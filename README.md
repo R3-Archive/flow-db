@@ -34,14 +34,14 @@ See https://docs.corda.net/tutorial-cordapp.html#running-the-example-cordapp.
 
 ### Via the web API
 
-Add a token to the node's database table by running:
+Add a token to the node's database table by making a PUT request to:
 
     localhost:10007/api/token/add-token?token=TOKEN_NAME&value=TOKEN_INITIAL_VALUE
 
-Update a token's value in the node's database table by running:
+Update a token's value in the node's database table by making a POST request to:
 
     localhost:10007/api/token/update-token?token=TOKEN_NAME&value=TOKEN_NEW_VALUE
 
-And read back a token's value from the node's database table by running:
+And read back a token's value from the node's database table by making a GET request to:
 
     localhost:10007/api/token/query-token?token=TOKEN_NAME
