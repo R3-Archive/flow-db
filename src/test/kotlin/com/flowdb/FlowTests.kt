@@ -1,10 +1,9 @@
 package com.flowdb
 
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.internal.StartedNode
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNetwork.MockNode
-import net.corda.testing.unsetCordappPackages
+import net.corda.testing.node.StartedMockNode
+import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -20,36 +19,29 @@ private val NEW_E_CASH_VALUE = 200
 
 class FlowTests {
     private lateinit var network: MockNetwork
-    private lateinit var a: StartedNode<MockNode>
+    private lateinit var a: StartedMockNode
 
     @Before
     fun setup() {
-        network = MockNetwork()
-
-        val nodes = network.createSomeNodes(1)
-        a = nodes.partyNodes[0]
-        a.database.transaction {
-            a.internals.installCordaService(CryptoValuesDatabaseService::class.java)
-        }
-
+        network = MockNetwork(listOf("com.flowdb"))
+        a = network.createPartyNode()
         network.runNetwork()
     }
 
     @After
     fun tearDown() {
         network.stopNodes()
-        unsetCordappPackages()
     }
 
     @Test
     fun `flowWritesToTableCorrectly`() {
         val flow1 = AddTokenValueFlow(BITCOIN, INITIAL_BITCOIN_VALUE)
-        val future1 = a.services.startFlow(flow1).resultFuture
+        val future1 = a.services.startFlow(flow1)
         network.runNetwork()
         future1.get()
 
         val flow2 = QueryTokenValueFlow(BITCOIN)
-        val future2 = a.services.startFlow(flow2).resultFuture
+        val future2 = a.services.startFlow(flow2)
         network.runNetwork()
         val bitcoinValueFromDB = future2.get()
 
@@ -59,17 +51,17 @@ class FlowTests {
     @Test
     fun `flowUpdatesTableCorrectly`() {
         val flow1 = AddTokenValueFlow(BITCOIN, INITIAL_BITCOIN_VALUE)
-        val future1 = a.services.startFlow(flow1).resultFuture
+        val future1 = a.services.startFlow(flow1)
         network.runNetwork()
         future1.get()
 
         val flow2 = UpdateTokenValueFlow(BITCOIN, NEW_BITCOIN_VALUE)
-        val future2 = a.services.startFlow(flow2).resultFuture
+        val future2 = a.services.startFlow(flow2)
         network.runNetwork()
         future2.get()
 
         val flow3 = QueryTokenValueFlow(BITCOIN)
-        val future3 = a.services.startFlow(flow3).resultFuture
+        val future3 = a.services.startFlow(flow3)
         network.runNetwork()
         val bitcoinValueFromDB = future3.get()
 
@@ -79,32 +71,32 @@ class FlowTests {
     @Test
     fun `tableSupportsMultipleTokensCorrectly`() {
         val flow1 = AddTokenValueFlow(BITCOIN, INITIAL_BITCOIN_VALUE)
-        val future1 = a.services.startFlow(flow1).resultFuture
+        val future1 = a.services.startFlow(flow1)
         network.runNetwork()
         future1.get()
 
         val flow2 = UpdateTokenValueFlow(BITCOIN, NEW_BITCOIN_VALUE)
-        val future2 = a.services.startFlow(flow2).resultFuture
+        val future2 = a.services.startFlow(flow2)
         network.runNetwork()
         future2.get()
 
         val flow3 = AddTokenValueFlow(E_CASH, INITIAL_E_CASH_VALUE)
-        val future3 = a.services.startFlow(flow3).resultFuture
+        val future3 = a.services.startFlow(flow3)
         network.runNetwork()
         future3.get()
 
         val flow4 = UpdateTokenValueFlow(E_CASH, NEW_E_CASH_VALUE)
-        val future4 = a.services.startFlow(flow4).resultFuture
+        val future4 = a.services.startFlow(flow4)
         network.runNetwork()
         future4.get()
 
         val flow5 = QueryTokenValueFlow(BITCOIN)
-        val future5 = a.services.startFlow(flow5).resultFuture
+        val future5 = a.services.startFlow(flow5)
         network.runNetwork()
         val bitcoinValueFromDB = future5.get()
 
         val flow6 = QueryTokenValueFlow(E_CASH)
-        val future6 = a.services.startFlow(flow6).resultFuture
+        val future6 = a.services.startFlow(flow6)
         network.runNetwork()
         val eCashValueFromDB = future6.get()
 
@@ -115,7 +107,7 @@ class FlowTests {
     @Test
     fun `errorIsThrownIfTokenNotInTable`() {
         val flow = QueryTokenValueFlow(BITCOIN)
-        val future = a.services.startFlow(flow).resultFuture
+        val future = a.services.startFlow(flow)
         network.runNetwork()
 
         assertFailsWith<IllegalArgumentException> { future.getOrThrow() }
