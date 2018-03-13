@@ -15,10 +15,8 @@ Under the hood, the database accesses are managed by the CryptoValuesDatabaseSer
 
 Be aware that support of database accesses in flows is currently limited:
 
-* The operation must be executed in a BLOCKING way. Flows don't currently support suspending to await an operation's  
-  response
-* The operation must be idempotent. If the flow fails and has to restart from a checkpoint, the operation will also be 
-  replayed
+* The operation must be executed in a BLOCKING way. Flows don't currently support suspending to await an operation's response
+* The operation must be idempotent. If the flow fails and has to restart from a checkpoint, the operation will also be replayed
 
 # Pre-requisites:
   
